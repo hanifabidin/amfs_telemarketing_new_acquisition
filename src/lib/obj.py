@@ -1,23 +1,33 @@
 # amfs_tm/src/lib/obj.py
-import abc
 import os
+import logging
 
 class Feature(object):
-    __metaclass__ = abc.ABCMeta
-
     def __init__(self, root, data_path, out_path, sep, snapshot):
-        """
-        In Databricks:
-        root: Absolute path to the project (e.g., /Volumes/catalog/schema/volume/amfs_tm)
-        data_path: Absolute path to processed data
-        out_path: Absolute path for feature output
-        """
         self.root = root
         self.data_path = data_path
         self.out_path = out_path
-        self.sep = "|"
+        self.sep = sep
         self.snapshot = snapshot
+        
+        # Absolute Volume Paths
+        self.abs_data_path = os.path.join(self.root, self.data_path)
+        self.abs_out_path = os.path.join(self.root, self.out_path)
 
-    @abc.abstractmethod
+    def safe_makedirs(self, path):
+        """Safely creates directories in Databricks Volumes without Errno 95."""
+        if not path or os.path.exists(path):
+            return
+        try:
+            os.makedirs(path, exist_ok=True)
+        except OSError as e:
+            # If we hit the Volume root restriction, try creating the leaf directory
+            if e.errno == 95: 
+                parent = os.path.dirname(path)
+                if os.path.exists(parent):
+                    os.mkdir(path)
+            else:
+                raise e
+
     def create(self):
         pass

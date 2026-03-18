@@ -1,60 +1,65 @@
 # amfs_tm/src/lib/feature/bank/cust_demo.py
 import os
-import numba
 import numpy as np
 import pandas as pd
 from lib import obj, util
 
 class CustDemo(obj.Feature):
-    def __init__(self, root, data_path, out_path, sep, snapshot):
-        """
-        Updated for Databricks:
-        root: Absolute Volume path (e.g., /Volumes/catalog/schema/vol/amfs_tm)
-        """
-        super().__init__(root, data_path, out_path, sep, snapshot)
-
-        # Construct absolute POSIX paths for Databricks Volumes
-        self.custdemo_path = os.path.join(self.root, data_path, snapshot, 'axa_cust_demo_{0}.csv')
-        self.feature_path = os.path.join(self.root, out_path, 'axa_cust_demo_clean_{0}.csv')
+    # No __init__ needed! It uses the one from obj.Feature automatically.
 
     def create(self):
-        input_path = self.custdemo_path.format(self.snapshot)
-        usecols = ['cuscls_id', 'cusedu_id', 'gender_id', 'houstyp_id',
-                   'occp_id', 'marital_id', 'year_addr', 'year_rel',
-                   'year_work', 'intuser_fg', 'mbluser_fg', 'prior_fg', 'rsdnt_fg',
-                   'vol_income', 'empinds_id', 'date_org', 'depend_id', 'age2', 'age']
-        
-        # Check schema for CIF column naming variants
+        # 1. Define Paths using absolute Volume paths from the base class
+        input_path = os.path.join(self.abs_data_path, self.snapshot, f'axa_cust_demo_{self.snapshot}.csv')
+        output_path = os.path.join(self.abs_out_path, f'axa_cust_demo_clean_{self.snapshot}.csv')
+
+        if not os.path.exists(input_path):
+            print(f"CustDemo input not found: {input_path}")
+            return
+
+        # 2. Define columns to keep
+        usecols = [
+            'cuscls_id', 'cusedu_id', 'gender_id', 'houstyp_id',
+            'occp_id', 'marital_id', 'year_addr', 'year_rel',
+            'year_work', 'intuser_fg', 'mbluser_fg', 'prior_fg', 'rsdnt_fg',
+            'vol_income', 'empinds_id', 'date_org', 'depend_id', 'age2', 'age'
+        ]
+
+        # 3. Check for CIF column naming variants (cus_no vs cusno)
+        # Using self.sep ('|') as we established earlier
         schema = pd.read_csv(input_path, sep=self.sep, encoding='utf-8', nrows=1)
-        if (schema.columns == 'cus_no').any():
+        if 'cus_no' in schema.columns:
             cif_col = 'cus_no'
-        elif (schema.columns == 'cusno').any():
+        elif 'cusno' in schema.columns:
             cif_col = 'cusno'
         else:
-            raise ValueError('Not found cus_no/cusno column in raw data!')
+            raise ValueError('Could not find cus_no or cusno column in raw data!')
         
         usecols.append(cif_col)
 
-        # Load and rename age tiers as per original requirement
-        customer_raw_indivual = pd.read_csv(input_path, sep='|', encoding='utf-8', usecols=usecols)
-        customer_raw_indivual = customer_raw_indivual.rename(columns={
+        # 4. Load Data
+        print(f"Reading file: {input_path}")
+        df = pd.read_csv(input_path, sep=self.sep, encoding='utf-8', usecols=usecols)
+        
+        # Rename for internal consistency
+        df = df.rename(columns={
             'age2': 'age_tier',
             'age': 'age_tier2',
             cif_col: 'cusno'
         })
 
-        print(f"Unique CIFs: {customer_raw_indivual.cusno.nunique()}")
-        print(f"Data shape: {customer_raw_indivual.shape}")
+        print(f"Unique CIFs: {df.cusno.nunique()}")
+        print(f"Data shape: {df.shape}")
 
-        # Map depend_id to numeric
+        # 5. Feature Engineering & Mapping
         depend_id_map = {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5}
-        customer_raw_indivual['depend_nb'] = customer_raw_indivual['depend_id'].map(depend_id_map, na_action='ignore')
+        df['depend_nb'] = df['depend_id'].map(depend_id_map, na_action='ignore')
 
-        # Convert columns to numeric
-        util.to_numeric(customer_raw_indivual, np.int64, 'cusno')
-        util.to_numeric(customer_raw_indivual, None, *['year_addr', 'year_rel', 'year_work', 'vol_income'])
+        # Convert to numeric safely
+        util.to_numeric(df, np.int64, 'cusno')
+        for col in ['year_addr', 'year_rel', 'year_work', 'vol_income']:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
 
-        # Categorical Validation (keep only allowed values, else NaN)
+        # 6. Categorical Validation
         valid_values = {
             'cusedu_id': ['A', 'B', 'C', 'D', 'E', 'F', 'Z'],
             'gender_id': ['M', 'F'],
@@ -69,21 +74,21 @@ class CustDemo(obj.Feature):
         }
 
         for col, values in valid_values.items():
-            customer_raw_indivual.loc[~customer_raw_indivual[col].isin(values), col] = np.nan
+            if col in df.columns:
+                df.loc[~df[col].isin(values), col] = np.nan
 
-        # Capping values using Numba
-        @numba.vectorize
-        def transform(x, minimum):
-            return x if x <= minimum else minimum
+        # 7. Capping (Replacing Numba with standard Pandas .clip)
+        # Faster and avoids ModuleNotFoundError
+        df['year_addr'] = df['year_addr'].clip(upper=60).fillna(0).astype(int)
+        df['year_work'] = df['year_work'].clip(upper=50).fillna(0).astype(int)
+        
+        # Relationship year validation
+        df.loc[~df['year_rel'].between(0, 30), 'year_rel'] = np.nan
 
-        customer_raw_indivual['year_addr'] = transform(customer_raw_indivual['year_addr'].values, 60).astype(int)
-        customer_raw_indivual['year_work'] = transform(customer_raw_indivual['year_work'].values, 50).astype(int)
-        customer_raw_indivual.loc[~customer_raw_indivual['year_rel'].between(0, 30), 'year_rel'] = np.nan
+        # Final cleanup
+        df = df.drop(['depend_id'], axis=1)
 
-        customer_raw_indivual = customer_raw_indivual.drop(['depend_id'], axis=1)
-
-        # Output to Volume
-        output_path = self.feature_path.format(self.snapshot)
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        # 8. Output to Volume with Safe Directory Creation
+        self.safe_makedirs(os.path.dirname(output_path))
         print(f'Writing cleaned demographics to {output_path}')
-        customer_raw_indivual.to_csv(output_path, sep=',', index=False)
+        df.to_csv(output_path, sep=',', index=False)

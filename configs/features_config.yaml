@@ -1,0 +1,44 @@
+# amfs_tm/configs/features_config.yaml
+# Consolidated feature generation settings
+
+features_to_run:
+  - module: lib.feature.bank.card_type
+    class: CreditType
+    enabled: true
+
+  - module: lib.feature.bank.card_type
+    class: DebitType
+    enabled: true
+
+  - module: lib.feature.bank.cust_demo
+    class: CustDemo
+    enabled: true
+
+  - module: lib.feature.bank.phsumm
+    class: BankPH
+    enabled: true
+    methods: ["create", "create_loan", "create_saving_account"]
+
+  - module: lib.feature.bank.balance
+    class: Balance
+    enabled: true
+    methods: ["create_clean", "create_raw", "create", "create_real"]
+
+  - module: lib.feature.bank.trx.trx_net
+    class: TrxNet
+    enabled: true
+    methods: ["create", "create_lag"]
+
+  - module: lib.feature.bank.trx.trx_outflow
+    class: TrxOutflow
+    enabled: true
+    methods: ["create", "create_lag"]
+
+  - module: lib.feature.bank.trx.trx_outflow_purchase
+    class: TrxOutflowPayment
+    enabled: true
+    methods: ["create", "create_lag"]
+
+  - module: lib.feature.geo.cust_zipcode
+    class: CustZipcode
+    enabled: true
