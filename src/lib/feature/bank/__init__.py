@@ -1,5 +1,5 @@
 from lib.feature.bank.phsumm import BankPH
-from lib.feature.bank.balance import BankBalance
+from lib.feature.bank.balance import Balance
 from lib.feature.bank.card_type import CreditType, DebitType
 from lib.feature.bank.avr import BankAvr
 #from lib.feature.bank.payroll import PayRoll

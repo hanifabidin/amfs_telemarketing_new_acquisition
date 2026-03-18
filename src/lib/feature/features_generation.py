@@ -1,97 +1,55 @@
 # amfs_tm/src/lib/feature/features_generation.py
-import argparse
 import os
-import sys
-import warnings
-from datetime import datetime
-
 import logging
-import yaml
-import configparser
+import importlib
+from lib.clean import clean_config_utils
 
-import pandas as pd
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# These imports refer to your local library structure
-from lib.feature import *
-from lib.segmentation import ApplyFlag
-
-warnings.filterwarnings("ignore")
-
-# Mapping of aliases to class objects remains the same
-dags = {
-    'bankavr': BankAvr,
-    'creditcard_type': CreditType,
-    'debitcard_type': DebitType,
-    'custdemo': CustDemo,
-    'balance': BankBalance,
-    'bankph': BankPH,
-    'maxtrxdate': MaxTrDate,
-    'trxdebit_edc': TrxDebitEdc,
-    'trxnet': TrxNet,
-    'trxoutflow': TrxOutflow,
-    'trxoutflow_payment': TrxOutflowPayment,
-    'trxper': TrxPer,
-    'zipcode': CustZipcode,
-    'tso': TSO,
-    'flag': ApplyFlag,
-    'fpf': FPF
-}
-
-def features_generation(main_config_file, features_config, arg_main):
-    """
-    Updated for Databricks: 
-    - Removes S3 bucket/prefix logic.
-    - Uses absolute paths for Volumes or DBFS.
-    """
+def features_generation(main_config_path, features_config_path, args):
+    main_cfg = clean_config_utils.load_config(main_config_path)
+    feat_cfg = clean_config_utils.load_config(features_config_path)
     
-    with open(main_config_file, 'r') as f:
-        main_config = yaml.safe_load(f)
+    if not main_cfg or not feat_cfg:
+        return
 
-    # In Databricks, we use the unified base_path defined in your updated YAML
-    # Example: /Volumes/training/amfs_data/main_volume/amfs_tm
-    base_path = main_config['PATHS']['base_path']
+    paths = main_cfg.get('PATHS', {})
+    base_path = paths.get('base_path')
+    proc_vol = paths.get('processed_dir_prefix')  
+    feat_vol = paths.get('features_dir_prefix')   
+    bm_feat_dir = paths.get('bm_features_subdir')
     
-    # Sub-directory relative paths from config
-    processed_dir = main_config['PATHS']['processed_dir']
-    features_dir = main_config['PATHS']['features_dir']
-    bm_feature_subdir = main_config['PATHS']['bm_features_subdir']
+    snapshot = args.snapshot
+    sep = '|' 
 
-    # Construct absolute POSIX paths
-    feature_output_path = os.path.join(base_path, features_dir, bm_feature_subdir)
-    processed_data_path = os.path.join(base_path, processed_dir)
-    
-    config = configparser.ConfigParser()
-    config.read(features_config)
+    data_rel_path = os.path.join(proc_vol, "data_from_BM")
+    out_rel_path = os.path.join(feat_vol, bm_feat_dir)
 
-    for section in config.sections():
-        job_alias = section
-        job_type = config[section]['job_type']
-        job_functions = config[section]['job_functions'].split(',')
-        is_job_run = config[section]['is_job_run']
+    logging.info(f"--- Feature Generation Start: {snapshot} ---")
 
-        if is_job_run == '1':
-            print(f'Start creating {job_type}: {job_alias}')
+    for feat_step in feat_cfg.get('features_to_run', []):
+        if not feat_step.get('enabled', False):
+            continue
+
+        module_name = feat_step.get('module')
+        class_name = feat_step.get('class')
+        
+        try:
+            module = importlib.import_module(module_name)
+            feat_class = getattr(module, class_name)
             
-            # CHANGE: Removed 's3://' + bucket_name + project logic.
-            # We pass the absolute base_path as the 'root'.
-            # Your DAG classes (BankAvr, etc.) must be updated to use os.path.join 
-            # instead of S3-specific logic inside their constructors.
-            obj = dags[job_alias](
-                base_path, 
-                processed_data_path, 
-                feature_output_path, 
-                None, 
-                arg_main.snapshot
+            instance = feat_class(
+                root=base_path,
+                data_path=data_rel_path,
+                out_path=out_rel_path,
+                sep=sep,
+                snapshot=snapshot
             )
 
-            for func in job_functions:
-                print(f'>>> Start running: {obj.__class__.__name__}.{func}()\n')
-                try:
-                    # eval remains standard Python, but ensure the underlying methods 
-                    # in your classes use local file I/O or Spark.
-                    method = getattr(obj, func.strip())
-                    method()
-                except AttributeError:
-                    print(f'Error: {obj.__class__.__name__} has no function {func}')
-                except Exception as e:
-                    print(f'Execution error in {func}: {e}')
+            methods = feat_step.get('methods', ['create'])
+            for m_name in methods:
+                logging.info(f"Executing {class_name}.{m_name}")
+                getattr(instance, m_name)()
+
+        except Exception as e:
+            logging.error(f"Failed feature {class_name}: {e}", exc_info=True)
