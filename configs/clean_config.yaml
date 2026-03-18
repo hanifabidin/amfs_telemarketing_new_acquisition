@@ -1,0 +1,149 @@
+# Configuration for data cleaning steps
+# Defines input files (relative to original_data_dir_BM), raw/processed names, and cleaning type
+
+cleaning_steps:
+  # entry 1: Standard cleaning using awk/sed replacement
+  - original_data_relative_path: axa_avr_{snapshot}.txt # Relative to original_data_dir_BM
+    raw_data_filename_pattern: axa_avr_{snapshot}.txt
+    processed_data_filename_pattern: axa_avr_{snapshot}.csv
+    data_source: BM # Helps determine original base path
+    cleaning_type: standard
+
+  # entry 2: Balance file cleaning (includes header to upper)
+  - original_data_relative_path: cifsumm_{snapshot}.txt # Relative to original_data_dir_BM
+    raw_data_filename_pattern: cifsumm_{snapshot}.txt
+    processed_data_filename_pattern: cifsumm_{snapshot}.csv
+    data_source: BM
+    cleaning_type: balance # Special type for header handling
+
+  # entry 3: Balance file cleaning (includes header to upper)
+  - original_data_relative_path: phsumm_{snapshot}.txt
+    raw_data_filename_pattern: phsumm_{snapshot}.txt
+    processed_data_filename_pattern: PHSUMM_{snapshot}.csv
+    data_source: BM
+    cleaning_type: balance # Special type for header handling
+
+  # entry 4: Standard cleaning using awk/sed replacement
+  - original_data_relative_path: cif_acct_mapping_{snapshot}.txt
+    raw_data_filename_pattern: cif_acct_mapping_{snapshot}.txt
+    processed_data_filename_pattern: cif_acct_mapping_{snapshot}.csv
+    data_source: BM
+    cleaning_type: standard
+
+  # entry 5: Standard cleaning using awk/sed replacement
+  - original_data_relative_path: cc_type_cnt_{snapshot}.txt
+    raw_data_filename_pattern: cc_type_cnt_{snapshot}.txt
+    processed_data_filename_pattern: cc_type_cnt_{snapshot}.csv
+    data_source: BM
+    cleaning_type: standard
+
+  # entry 6: Customer Demo cleaning (includes filtering)
+  - original_data_relative_path: axa_cust_demo_{snapshot}.txt
+    raw_data_filename_pattern: axa_cust_demo_{snapshot}.txt
+    processed_data_filename_pattern: axa_cust_demo_{snapshot}.csv
+    data_source: BM
+    cleaning_type: custdemo # Special type for filtering
+
+  # entry 7: Standard cleaning using awk/sed replacement
+  - original_data_relative_path: dc_type_cnt_{snapshot}.txt
+    raw_data_filename_pattern: dc_type_cnt_{snapshot}.txt
+    processed_data_filename_pattern: dc_type_cnt_{snapshot}.csv
+    data_source: BM
+    cleaning_type: standard
+
+  # entry 8: Standard cleaning using awk/sed replacement
+  - original_data_relative_path: axa_cust_cd_{snapshot}.txt
+    raw_data_filename_pattern: axa_cust_cd_{snapshot}.txt
+    processed_data_filename_pattern: axa_cust_cd_{snapshot}.csv
+    data_source: BM
+    cleaning_type: standard
+
+  # # entry 9: Standard cleaning using awk/sed replacement
+  # - original_data_relative_path: axa_cust_db_{snapshot}.txt
+  #   raw_data_filename_pattern: axa_cust_db_{snapshot}.csv
+  #   processed_data_filename_pattern: axa_cust_db_{snapshot}.csv
+  #   data_source: BM
+  #   cleaning_type: standard
+
+  # entry 10: TrxDebit EDC cleaning (includes filtering by snapshot)
+  - original_data_relative_path: debitcard_trx_edc_cif_{snapshot}.txt
+    raw_data_filename_pattern: debitcard_trx_edc_{snapshot}.txt
+    processed_data_filename_pattern: debitcard_trx_edc_{snapshot}.txt
+    data_source: BM
+    cleaning_type: trxdebit_edc # Special type for snapshot filtering
+
+  # entry 11: TrxNet cleaning (includes Python-based processing)
+  - original_data_relative_path: axa_tran_net_{snapshot}.txt
+    raw_data_filename_pattern: axa_tran_net_{snapshot}.txt
+    processed_data_filename_pattern: axa_tran_net_{snapshot}.csv
+    data_source: BM
+    cleaning_type: trxnet # Requires specific Python processing
+
+  # entry 12: Standard cleaning using awk/sed replacement
+  - original_data_relative_path: trx_outflow_{snapshot}.txt
+    raw_data_filename_pattern: trx_outflow_{snapshot}.txt
+    processed_data_filename_pattern: trx_outflow_{snapshot}.csv
+    data_source: BM
+    cleaning_type: standard
+
+  # entry 13: Standard cleaning using awk/sed replacement
+  - original_data_relative_path: trx_outflow_payment_purchase_{snapshot}.txt
+    raw_data_filename_pattern: trx_outflow_payment_purchase_{snapshot}.txt
+    processed_data_filename_pattern: trx_outflow_payment_purchase_{snapshot}.csv
+    data_source: BM
+    cleaning_type: standard
+
+  # entry 14: Standard cleaning using awk/sed replacement
+  - original_data_relative_path: axa_tran_allper_cd_{snapshot}.txt
+    raw_data_filename_pattern: axa_tran_allper_cd_{snapshot}.txt
+    processed_data_filename_pattern: axa_tran_allper_cd_{snapshot}.csv
+    data_source: BM
+    cleaning_type: standard
+
+  # entry 15: Standard cleaning using awk/sed replacement
+  - original_data_relative_path: axa_tran_allper_db_{snapshot}.txt
+    raw_data_filename_pattern: axa_tran_allper_db_{snapshot}.txt
+    processed_data_filename_pattern: axa_tran_allper_db_{snapshot}.csv
+    data_source: BM
+    cleaning_type: standard
+
+  # entry 16: Standard cleaning using awk/sed replacement
+  - original_data_relative_path: cust_zipcode_mapping_{snapshot}.txt
+    raw_data_filename_pattern: cust_zipcode_mapping_{snapshot}.txt
+    processed_data_filename_pattern: cust_zipcode_mapping_{snapshot}.csv
+    data_source: BM
+    cleaning_type: standard
+
+  # entry 17: Standard cleaning using awk/sed replacement
+  - original_data_relative_path: ALL_STATUS_{snapshot}.csv
+    raw_data_filename_pattern: ALL_STATUS_{snapshot}.csv
+    processed_data_filename_pattern: ALL_STATUS_{snapshot}.csv
+    data_source: AMFS
+    cleaning_type: standard
+
+  # entry 18: Standard cleaning using awk/sed replacement
+  - original_data_relative_path: call_tracking_savings_{snapshot}.csv
+    raw_data_filename_pattern: call_tracking_savings_{snapshot}.csv
+    processed_data_filename_pattern: call_tracking_savings_{snapshot}.csv
+    data_source: AMFS
+    cleaning_type: standard
+
+# # AMFS file constants (used by clean_amfs_dataset.py)
+# amfs_files:
+#   call_tracking_raw_pattern: CALL_TRACKING_SAVING_{snap}.txt
+#   call_tracking_processed_pattern: CALL_TRACKING_SAVING_{snap}.txt # Using txt, but script saves tsv
+#   call_tracking_original_example: {snapshot}_data_AMFS_for_cloud/CALL_TRACKING_SAVING/CALL_TRACKING_SAVING_{snapshot}.csv # Example path in S3
+
+#   all_status_raw_pattern: ALL_STATUS_{snap}.txt
+#   all_status_processed_pattern: ALL_STATUS_{snap}.txt # Using txt, but script saves tsv
+#   all_status_original_example: {snapshot}_data_AMFS_for_cloud/ALL_STATUS/ALL_STATUS_{snapshot}.csv # Example path in S3
+
+#   future_leads_raw_pattern: 'DATA_FOR_SOURCE {snap}.txt' # Needs next month 'my' format
+#   future_leads_processed_pattern: 'DATA_FOR_SOURCE {snap}.txt' # Needs next month 'my' format
+#   future_leads_original_example: {snapshot}_data_AMFS_for_cloud/DATA_FOR_SOURCE/DATA_FOR_SOURCE_{snapshot}.csv # Example path in S3
+
+#   # Note: DO_NOT_CALL is handled slightly differently in clean_amfs_dataset.py
+#   do_not_call_raw_pattern: DO_NOT_CALL_{snap}.csv # Needs next month 'my' format, ASSUMING CSV now
+#   do_not_call_processed_pattern: DO_NOT_CALL_{snap}_final.csv # Needs next month 'my' format
+#   do_not_call_original_example: {snapshot}_data_AMFS_for_cloud/DO_NOT_CALL/DO_NOT_CALL_{snapshot}.csv # Example path in S3
+#   cif_mapping_complete_pattern: cif_acct_mapping_{snapshot}_Complete.txt # Processed feature, needs YYYYMM

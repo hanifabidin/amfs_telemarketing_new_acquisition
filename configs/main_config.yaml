@@ -1,0 +1,15 @@
+# amfs_tm/configs/main_config.yaml
+# Updated for Databricks Unity Catalog Volumes
+PATHS:
+  # Replace the S3 bucket/prefix with a Volume path
+  # Format: /Volumes/<catalog>/<schema>/<volume_name>/amfs_tm
+  base_path: /Volumes/training/amfs_data/main_volume/amfs_tm
+
+  # Sub-directories become absolute extensions of the base_path
+  raw_dir: data/01_raw
+  processed_dir: data/02_processed
+  features_dir: data/03_features
+  matrix_output_dir: data/04_matrix
+
+  bm_features_subdir: BM_features
+  axa_features_subdir: AXA_Features

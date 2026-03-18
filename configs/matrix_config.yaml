@@ -1,0 +1,75 @@
+# Configuration for Matrix Generation (Merge & Impute steps)
+
+conf:
+  # Overall control
+  running_mode: all # Options: all, merge, impute
+  # Input filtered CIF list (relative path within campaigns_prefix)
+  input: "Leads_{campaign}/filtered_cif_{snapshot}_{DIL}.csv"
+  # Intermediate output after merging features (relative path within campaigns_prefix)
+  merge_output: "Leads_{campaign}/merged_matrix_{snapshot}_{DIL}.csv"
+  # Final output after imputation/dummification (relative path within campaigns_prefix)
+  dummified_output: "Leads_{campaign}/final_matrix_{snapshot}_{DIL}.csv"
+  # Separator for reading 'input' and writing 'merge_output', 'dummified_output'
+  sep: ','
+  # ID column name in the 'input' file (must be cifno)
+  # id_column: cifno # Implicitly handled by code
+
+# --- Feature Files to Merge ---
+# Each key is an identifier for a feature set (used internally, can be descriptive)
+# Assumes feature files are relative to {features_dir_prefix}/{bm_features_subdir} defined in main_config.yaml
+
+feature_balance:
+  file: "bal_loan_feat_{snapshot}.csv" # Filename pattern, {snapshot} uses file_format
+  file_format: '%y%m' # Date format for snapshot in filename
+  sep: ','
+  name: bank_bal # Base name for flag column (_tableflag)
+  key: CIFNO # Key column in this feature file
+  addon: '_bank_bal' # Optional suffix to add to feature columns before merging (use 'nan' or omit if none)
+  addon_cols: null # Specific columns to add suffix to (comma-separated, null/omit for all except key)
+  use_cols: null # Specific columns to keep from this file (comma-separated, null/omit for all)
+
+feature_phsumm:
+  file: "PHSUMM_{snapshot}_feat.csv"
+  file_format: '%Y%m' # Original used YYYYMM
+  sep: ','
+  name: bank_ph
+  key: CIFNO
+  addon: '_bank_ph'
+  addon_cols: null
+  use_cols: null
+
+feature_custdemo:
+  file: "axa_cust_demo_clean_{snapshot}.csv"
+  file_format: '%Y%m'
+  sep: ','
+  name: cust_demo
+  key: cusno # Key is cusno here
+  addon: null # or 'nan'
+  addon_cols: null
+  use_cols: null # Load relevant columns needed downstream
+
+feature_avr:
+  file: "axa_avr_{snapshot}_feat.csv"
+  file_format: '%Y%m'
+  sep: ','
+  name: bank_avr
+  key: CIFNO
+  addon: '_bank_avr'
+  addon_cols: null
+  use_cols: null
+
+# ... Add entries for ALL feature files listed in the original matrix_config.ini ...
+# Ensure 'file', 'file_format', 'sep', 'name', 'key' are correctly specified.
+# Adjust 'addon', 'addon_cols', 'use_cols' as needed ('null' or 'nan' means not used).
+
+# Example for a transaction feature
+# feature_trxnet_lag:
+#   file: "trxnet_{snapshot}_lag_feat.h5" # Assuming HDF5 output from feature gen
+#   file_format: '%Y%m'
+#   sep: null # Not used for HDF5
+#   name: trxnet_lag
+#   key: cifno # Assuming key is cifno
+#   addon: '_trxnet_lag'
+#   addon_cols: null
+#   use_cols: null
+#   hdf_key: trxfeat # Key within HDF5 file (if needed by reader)
