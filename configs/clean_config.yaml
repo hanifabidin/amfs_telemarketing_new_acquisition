@@ -84,3 +84,8 @@ cleaning_steps:
     processed_data_filename_pattern: call_tracking_savings_{snapshot}.csv
     data_source: AMFS
     cleaning_type: standard
+
+  - raw_data_filename_pattern: TSO_{snapshot}.txt
+    processed_data_filename_pattern: TSO_{snapshot}.csv
+    data_source: AMFS
+    cleaning_type: standard

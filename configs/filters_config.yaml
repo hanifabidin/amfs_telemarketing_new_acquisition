@@ -1,0 +1,101 @@
+# amfs_tm/src/lib/filters/filters_config.yaml
+
+output:
+  path: "04_campaigns/{campaign}/01_filters/filtered_cif_{snapshot}_DIL_{DIL}_campaign_{campaign}.csv"
+
+rules:
+  exclude_new_customer:
+    enabled: true
+    file: "03_features/BM_features/PHSUMM_{snapshot}_feat.csv"
+    key: cifno
+    usecols: cifno,saving_acct_vint_l
+    params:
+      min_vint_months: 3
+
+  segment_rule:
+    enabled: true
+    file: "03_features/cif_flag_mapping/cif_with_flag_{snapshot}_active_complete.csv"
+    key: cifno
+    usecols: cifno,bank_active_flag,axa_pol_flag
+    params:
+      exclude_non_active: true   # Excludes if bank_active_flag == 0
+      exclude_existing_axa: true # Excludes if axa_pol_flag == 1
+
+  master_filter:
+    enabled: false
+    file: "01_raw/data_from_BM/{snapshot}/master_filter_{snapshot}.txt"
+    sep: "|"
+    key: cifno
+    usecols: >-
+      account_flag,occp_flag,priority_flag,branch_flag,age_flag,
+      contactable_flag,kum_flag,duplicate_phonenum,fg_perorangan,cifno
+    params:
+      account_flag: "has_deductible_account"
+      occp_flag: "no"
+      priority_flag: "no"
+      branch_flag: "no"
+      age_flag: "no"
+      contactable_flag: "yes"
+      kum_flag: "no"
+      duplicate_phonenum: "no"
+      fg_perorangan: "yes"
+
+  consent_filter:
+    enabled: false
+    file: "01_raw/data_from_BM/{snapshot}/master_filter_consent_{snapshot}.txt"
+    sep: "|"
+    key: cifno
+    usecols: cifno,consent_komunikasi_voice_call
+    params:
+      consent_value: 1
+
+  min_balance_rule:
+    enabled: false
+    file: "03_features/BM_features/bal_deduct_{snapshot}.csv"
+    key: cifno
+    usecols: cifno,AVGD
+    params:
+      min_avgd: 0
+
+  age_tier_rule:
+    enabled: false
+    file: "03_features/BM_features/axa_cust_demo_clean_{snapshot}.csv"
+    key: cusno
+    usecols: cusno,age_tier
+    params:
+      # Define which tiers are allowed to stay in the leads
+      allowed_tiers: [2,3,4,5,6,7,8,9]
+
+  do_not_call:
+    enabled: false
+    file: "02_processed/data_from_AMFS/{snapshot}/DO_NOT_CALL_{campaign2}_final.csv"
+    key: CIFNO # Assuming standard cleaning mapped ACCNUMBER to CIFNO
+    usecols: CIFNO
+
+  bad_calls_history:
+    enabled: false
+    # Points to call tracking instead of a separate DB
+    file: "02_processed/data_from_AMFS/{snapshot}/call_tracking_savings_{snapshot}.csv"
+    key: accnumber # Cleaning step joins this to CIFNO
+    usecols: accnumber,callid
+    params:
+      months_back: 6 
+      # Define IDs that represent bad calls (e.g., dead number, wrong person)
+      bad_callids: [102, 103, 105] 
+
+  sent_leads_history:
+    enabled: false
+    file: "02_processed/sent_leads_db.csv"
+    key: CIFNO
+    usecols: CIFNO,SENT_DATE
+    params:
+      exclude_months: 6
+
+  call_tracking_history:
+    enabled: false
+    file: "02_processed/data_from_AMFS/{snapshot}/call_tracking_savings_{snapshot}.csv"
+    key: accnumber
+    usecols: accnumber,callid,calldate
+    params:
+      months_back: 3
+      exclude_mode: "contacted" # Options: contacted (>=201), converted (>=901), all

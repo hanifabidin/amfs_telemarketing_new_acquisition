@@ -1,75 +1,123 @@
-# Configuration for Matrix Generation (Merge & Impute steps)
+# amfs_tm/configs/matrix_config.yaml
 
-conf:
-  # Overall control
-  running_mode: all # Options: all, merge, impute
-  # Input filtered CIF list (relative path within campaigns_prefix)
-  input: "Leads_{campaign}/filtered_cif_{snapshot}_{DIL}.csv"
-  # Intermediate output after merging features (relative path within campaigns_prefix)
-  merge_output: "Leads_{campaign}/merged_matrix_{snapshot}_{DIL}.csv"
-  # Final output after imputation/dummification (relative path within campaigns_prefix)
-  dummified_output: "Leads_{campaign}/final_matrix_{snapshot}_{DIL}.csv"
-  # Separator for reading 'input' and writing 'merge_output', 'dummified_output'
-  sep: ','
-  # ID column name in the 'input' file (must be cifno)
-  # id_column: cifno # Implicitly handled by code
+settings:
+  # Mode: 'all' (merge + impute), 'merge' (join only), 'impute' (dummify only)
+  running_mode: "all"
+  
+  # Input from the filtering step
+  input_file: "04_campaigns/{campaign}/01_filters/filtered_cif_{snapshot}_DIL_{dil}_campaign_{campaign}.csv"
+  
+  # Intermediate merge output
+  merge_output: "04_campaigns/{campaign}/02_matrix/matrix_{snapshot}_merged_raw.csv"
+  
+  # Final dummified/imputed output
+  final_output: "04_campaigns/{campaign}/02_matrix/matrix_{snapshot}_DIL_{dil}_campaign_{campaign}_final.csv"
 
-# --- Feature Files to Merge ---
-# Each key is an identifier for a feature set (used internally, can be descriptive)
-# Assumes feature files are relative to {features_dir_prefix}/{bm_features_subdir} defined in main_config.yaml
+feature_sets:
+  cif_summary:
+    enabled: true
+    file: "03_features/BM_features/CIFSUMM_{snapshot}_cleaned.csv"
+    key: cifno
+    usecols: [] # Empty list = take all columns
 
-feature_balance:
-  file: "bal_loan_feat_{snapshot}.csv" # Filename pattern, {snapshot} uses file_format
-  file_format: '%y%m' # Date format for snapshot in filename
-  sep: ','
-  name: bank_bal # Base name for flag column (_tableflag)
-  key: CIFNO # Key column in this feature file
-  addon: '_bank_bal' # Optional suffix to add to feature columns before merging (use 'nan' or omit if none)
-  addon_cols: null # Specific columns to add suffix to (comma-separated, null/omit for all except key)
-  use_cols: null # Specific columns to keep from this file (comma-separated, null/omit for all)
+  bank_ph:
+    enabled: true
+    file: "03_features/BM_features/PHSUMM_{snapshot}_feat.csv"
+    key: cifno
+    usecols: []
 
-feature_phsumm:
-  file: "PHSUMM_{snapshot}_feat.csv"
-  file_format: '%Y%m' # Original used YYYYMM
-  sep: ','
-  name: bank_ph
-  key: CIFNO
-  addon: '_bank_ph'
-  addon_cols: null
-  use_cols: null
+  saving_acct:
+    enabled: true
+    file: "03_features/BM_features/Saving_Acct_{snapshot}_feat.csv"
+    key: cifno
+    usecols: []
 
-feature_custdemo:
-  file: "axa_cust_demo_clean_{snapshot}.csv"
-  file_format: '%Y%m'
-  sep: ','
-  name: cust_demo
-  key: cusno # Key is cusno here
-  addon: null # or 'nan'
-  addon_cols: null
-  use_cols: null # Load relevant columns needed downstream
+  axa_avr:
+    enabled: true
+    file: "03_features/BM_features/axa_avr_{snapshot}_feat.csv"
+    key: cifno
+    usecols: []
 
-feature_avr:
-  file: "axa_avr_{snapshot}_feat.csv"
-  file_format: '%Y%m'
-  sep: ','
-  name: bank_avr
-  key: CIFNO
-  addon: '_bank_avr'
-  addon_cols: null
-  use_cols: null
+  cust_demo:
+    enabled: true
+    file: "03_features/BM_features/axa_cust_demo_clean_{snapshot}.csv"
+    key: cusno
+    usecols: []
 
-# ... Add entries for ALL feature files listed in the original matrix_config.ini ...
-# Ensure 'file', 'file_format', 'sep', 'name', 'key' are correctly specified.
-# Adjust 'addon', 'addon_cols', 'use_cols' as needed ('null' or 'nan' means not used).
+  balance_feat:
+    enabled: true
+    file: "03_features/BM_features/bal_{snap_short}_feat.csv"
+    key: cifno
+    usecols: []
 
-# Example for a transaction feature
-# feature_trxnet_lag:
-#   file: "trxnet_{snapshot}_lag_feat.h5" # Assuming HDF5 output from feature gen
-#   file_format: '%Y%m'
-#   sep: null # Not used for HDF5
-#   name: trxnet_lag
-#   key: cifno # Assuming key is cifno
-#   addon: '_trxnet_lag'
-#   addon_cols: null
-#   use_cols: null
-#   hdf_key: trxfeat # Key within HDF5 file (if needed by reader)
+  balance_raw:
+    enabled: true
+    file: "03_features/BM_features/bal_{snap_short}_feat_raw.csv"
+    key: cifno
+    usecols: []
+
+  balance_deduct:
+    enabled: true
+    file: "03_features/BM_features/bal_deduct_{snapshot}.csv"
+    key: cifno
+    usecols: []
+
+  loan_feat:
+    enabled: true
+    file: "03_features/BM_features/bal_loan_feat_{snap_short}.csv"
+    key: cifno
+    usecols: ['max_bal_3mth', 'max_bal_6mth', 'min_bal_3mth', 'avg_bal_3mth', 'd20_3mth', 'delta_avg_bal_t1_t2', 'ratio_delta_avg_bal_t1_t2', 'delta_avg_bal_t2_t3', 'ratio_delta_avg_bal_t2_t3', 'delta_avg_bal_t3_t4', 'ratio_delta_avg_bal_t3_t4', 'loan_to_debit']
+
+  cc_counts:
+    enabled: true
+    file: "03_features/BM_features/cc_type_cnt_{snapshot}_feat.csv"
+    key: cifno
+    usecols: []
+
+  dc_counts:
+    enabled: true
+    file: "03_features/BM_features/dc_type_cnt_{snapshot}_feat.csv"
+    key: cifno
+    usecols: []
+
+  loan_diff:
+    enabled: true
+    file: "03_features/BM_features/loan_diff_{snapshot}_feat.csv"
+    key: cifno
+    usecols: []
+
+  trx_net:
+    enabled: true
+    file: "03_features/BM_features/trxnet_{snapshot}_feat.csv"
+    key: cifno
+    usecols: []
+
+  trx_net_lag:
+    enabled: true
+    file: "03_features/BM_features/trxnet_{snapshot}_lag_feat.csv"
+    key: cifno
+    usecols: []
+
+  trx_out:
+    enabled: true
+    file: "03_features/BM_features/trxout_{snapshot}_feat.csv"
+    key: cifno_pengirim
+    usecols: []
+
+  trx_out_lag:
+    enabled: true
+    file: "03_features/BM_features/trxout_{snapshot}_lag_feat.csv"
+    key: cifno_pengirim
+    usecols: []
+
+  trx_purchase:
+    enabled: true
+    file: "03_features/BM_features/trxout_purchase_{snapshot}_feat.csv"
+    key: customer_no
+    usecols: []
+
+  trx_purchase_lag:
+    enabled: true
+    file: "03_features/BM_features/trxout_purchase_{snapshot}_lag_feat.csv"
+    key: customer_no
+    usecols: []

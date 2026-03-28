@@ -1,24 +1,45 @@
 import pandas as pd
 import numpy as np
 import os
-import re
 import logging
 import yaml
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
-# Set up logging for output messages
+# Set up logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-# --- 1. Imputation and Dummification Dictionaries ---
+# --- 1. CONFIGURATION DICTIONARIES ---
+
+# Dictionary for renaming columns to remove spaces (Standardizing for Models)
+CHANGE_NAMES = {
+    'bill payment_freq_trxout': 'billpayment_freq_trxout',
+    'bill payment_amt_trxout': 'billpayment_amt_trxout',
+    'bill payment_amt_per_trxout': 'billpayment_amt_per_trxout',
+    'credit card_freq_trxout': 'creditcard_freq_trxout',
+    'credit card_amt_trxout': 'creditcard_amt_trxout',
+    'credit card_amt_per_trxout': 'creditcard_amt_per_trxout',
+    'interbank transfer_freq_trxout': 'interbanktransfer_freq_trxout',
+    'interbank transfer_amt_trxout': 'interbanktransfer_amt_trxout',
+    'interbank transfer_amt_per_trxout': 'interbanktransfer_amt_per_trxout',
+    'intrabank transfer_freq_trxout': 'intrabanktransfer_freq_trxout',
+    'intrabank transfer_amt_trxout': 'intrabanktransfer_amt_trxout',
+    'intrabank transfer_amt_per_trxout': 'intrabanktransfer_amt_per_trxout',
+    'personal loan_freq_trxout': 'personalloan_freq_trxout',
+    'personal loan_amt_trxout': 'personalloan_amt_trxout',
+    'personal loan_amt_per_trxout': 'personalloan_amt_per_trxout',
+    'tv cable_freq_trxout': 'tvcable_freq_trxout',
+    'tv cable_amt_trxout': 'tvcable_amt_trxout',
+    'tv cable_amt_per_trxout': 'tvcable_amt_per_trxout'
+}
 
 # Mapping for imputation strategy
-impute_dict = (
+IMPUTE_DICT = [
     {'feature': 'nominal_capita', 'impute_with': 'CUST_MEDIAN'},
     {'feature': 'ppp_capita', 'impute_with': 'CUST_MEDIAN'},
     {'feature': 'nominal', 'impute_with': 'CUST_MEDIAN'},
     {'feature': 'ppp', 'impute_with': 'CUST_MEDIAN'},
     {'feature': 'population', 'impute_with': 'CUST_MEDIAN'},
-    {'feature': 'EAST', 'impute_with': 'CUST_MEDIAN'},
-    {'feature': 'WEST', 'impute_with': 'CUST_MEDIAN'},
     {'feature': 'maxdt_range_cnts', 'impute_with': 'CUST_MEDIAN'},
     {'feature': 'mindt_range_cnts', 'impute_with': 'CUST_MEDIAN'},
     {'feature': 'age_tier', 'impute_with': 'CUST_MEDIAN'},
@@ -28,7 +49,7 @@ impute_dict = (
     {'feature': 'vol_income', 'impute_with': 'CUST_MEDIAN'},
     {'feature': 'date_org_vintage', 'impute_with': 'CUST_MEDIAN'},
     {'feature': 'depend_nb', 'impute_with': 'CUST_MEDIAN'},
-    {'feature': 'TOTPH_bank_ph', 'impute_with': 'CUST_MEDIAN'},
+    {'feature': 'totph_bank_ph', 'impute_with': 'CUST_MEDIAN'},
     {'feature': 'saving_acct_vint_l_bank_ph', 'impute_with': 'CUST_MEDIAN'},
     {'feature': 'saving_acct_vint_f_bank_ph', 'impute_with': 'CUST_MEDIAN'},
     {'feature': 'saving_acct_delta_bank_ph', 'impute_with': 'CUST_MEDIAN'},
@@ -44,9 +65,9 @@ impute_dict = (
     {'feature': 'mbluser_fg', 'impute_with': 'CUST_MODE'},
     {'feature': 'prior_fg', 'impute_with': 'CUST_MODE'},
     {'feature': 'rsdnt_fg', 'impute_with': 'CUST_MODE'}
-)
+]
 
-categorical_features = {
+CATEGORICAL_FEATURES = {
     'intuser_fg': ['Y'],
     'mbluser_fg': ['Y'],
     'prior_fg': ['Y'],
@@ -60,149 +81,128 @@ categorical_features = {
     'empinds_id': [9, 3, 7, 5, 1, 8, 6, 6006, 2, 6009, 6008, 7001, 4, 6003, 8001, 6007, 9001, 6002, 6001, 6005, 6004]
 }
 
-change_names = {
-    'BILL PAYMENT_freq_trxout': 'BILLPAYMENT_freq_trxout',
-    'BILL PAYMENT_amt_trxout': 'BILLPAYMENT_amt_trxout',
-    'BILL PAYMENT_amt_per_trxout': 'BILLPAYMENT_amt_per_trxout',
-    'CREDIT CARD_freq_trxout': 'CREDITCARD_freq_trxout',
-    'CREDIT CARD_amt_trxout': 'CREDITCARD_amt_trxout',
-    'CREDIT CARD_amt_per_trxout': 'CREDITCARD_amt_per_trxout',
-    'INTERBANK TRANSFER_freq_trxout': 'INTERBANKTRANSFER_freq_trxout',
-    'INTERBANK TRANSFER_amt_trxout': 'INTERBANKTRANSFER_amt_trxout',
-    'INTERBANK TRANSFER_amt_per_trxout': 'INTERBANKTRANSFER_amt_per_trxout',
-    'INTRABANK TRANSFER_freq_trxout': 'INTRABANKTRANSFER_freq_trxout',
-    'INTRABANK TRANSFER_amt_trxout': 'INTRABANKTRANSFER_amt_trxout',
-    'INTRABANK TRANSFER_amt_per_trxout': 'INTRABANKTRANSFER_amt_per_trxout',
-    'PERSONAL LOAN_freq_trxout': 'PERSONALLOAN_freq_trxout',
-    'PERSONAL LOAN_amt_trxout': 'PERSONALLOAN_amt_trxout',
-    'PERSONAL LOAN_amt_per_trxout': 'PERSONALLOAN_amt_per_trxout',
-    'TV CABLE_freq_trxout': 'TVCABLE_freq_trxout',
-    'TV CABLE_amt_trxout': 'TVCABLE_amt_trxout',
-    'TV CABLE_amt_per_trxout': 'TVCABLE_amt_per_trxout'
-}
-
-useless_columns = [
+USELESS_COLUMNS = [
     'cuscls_id', 'sum_purchase_amt_per_trxout', 'sum_db_trxper',
-    'sum_cd_trxper', 'MXDT_range_lm', 'MNDT_range_lm', 'MXDT_range_lm2', 'MNDT_range_lm2',
-    'MXDT_range_lm3', 'MNDT_range_lm3', 'delta_range_lm3', 'delta_range_lm2', 'weekday_MXDT',
-    'weekday_MNDT', 'trx_month_db_edc', 'EAST'
+    'sum_cd_trxper', 'mxdt_range_lm', 'mndt_range_lm', 'mxdt_range_lm2', 'mndt_range_lm2',
+    'mxdt_range_lm3', 'mndt_range_lm3', 'delta_range_lm3', 'delta_range_lm2', 'weekday_mxdt',
+    'weekday_mndt', 'trx_month_db_edc', 'east'
 ]
 
-# --- 2. Core Logic Functions ---
+# --- 2. CORE LOGIC ---
 
-def _impute_static(data_set: pd.DataFrame):
-    """Applies the imputation rules based on impute_dict."""
-    for impute_item in impute_dict:
-        feature = impute_item['feature']
-        impute_with = impute_item['impute_with']
+def _impute_static(df: pd.DataFrame):
+    """Applies the imputation rules based on IMPUTE_DICT."""
+    categorical_cols_to_drop = []
+    for item in IMPUTE_DICT:
+        feature = item['feature']
+        impute_with = item['impute_with']
 
-        if feature not in data_set.columns:
+        if feature not in df.columns:
             continue
 
-        if data_set[feature].notnull().all():
+        if df[feature].notnull().all():
             continue
 
         v = None
         if impute_with == 'CREATE_CATEGORY':
             v = 'NULL_CATEGORY'
+            categorical_cols_to_drop.append(feature)
         elif impute_with == 'CUST_MEDIAN':
-            v = data_set[feature].median() 
+            # Force numeric for median safety
+            df[feature] = pd.to_numeric(df[feature], errors='coerce')
+            v = df[feature].median() 
+            if pd.isna(v): v = 0
         elif impute_with == 'CUST_MODE':
-            value_counts = data_set[feature].value_counts(dropna=True)
-            if value_counts.empty:
-                v = 'NULL_CATEGORY'
-            else:
-                v = value_counts.index[0]
+            counts = df[feature].value_counts(dropna=True)
+            v = counts.index[0] if not counts.empty else 'NULL_CATEGORY'
+            categorical_cols_to_drop.append(feature)
 
         if v is not None:
-            if pd.isna(v) and impute_with == 'CUST_MEDIAN':
-                 v = 0 
-            if impute_with in ['CREATE_CATEGORY', 'CUST_MODE'] and v != 0:
+            # Categorical modes must be strings
+            if impute_with in ['CREATE_CATEGORY', 'CUST_MODE'] and not isinstance(v, (int, float)):
                  v = str(v)
-            data_set[feature] = data_set[feature].fillna(v)
-            logging.info(f"Imputed missing values in feature {feature} with value {v}")
+            df[feature] = df[feature].fillna(v)
+            logging.info(f"Imputed {feature} with {v}")
 
-    return [item['feature'] for item in impute_dict if item['impute_with'] in ['CREATE_CATEGORY', 'CUST_MODE']]
+    return categorical_cols_to_drop
 
-def impute_and_dummy_matrix(main_config_file, arg_main):
+def impute_and_dummy_matrix(main_config_path, matrix_config_path, args):
     """
-    Final preprocessing step: Handles imputation and dummification on Databricks.
-    Removes s3fs dependency.
+    Orchestrator for Matrix Imputation and Dummification.
     """
-    snapshot = arg_main.snapshot
-    
-    with open(main_config_file, 'r') as f:
-        main_config = yaml.safe_load(f)
+    snapshot = args.snapshot
+    with open(main_config_path, 'r') as f:
+        main_cfg = yaml.safe_load(f)
+    with open(matrix_config_path, 'r') as f:
+        matrix_cfg = yaml.safe_load(f)
 
-    # Use absolute POSIX paths for Unity Catalog Volumes
-    # Example base_path: /Volumes/catalog/schema/volume/amfs_tm
-    base_path = main_config['PATHS']['base_path']
-    matrix_output_dir = main_config['PATHS']['matrix_output_dir']
-    
-    # Input/Output constructed via os.path.join
-    INPUT_FILENAME = f"matrix_raw_{snapshot}.csv"
-    INPUT_PATH = os.path.join(base_path, matrix_output_dir, INPUT_FILENAME)
-    
-    OUTPUT_FILENAME = f"matrix_final_{snapshot}.csv"
-    FINAL_OUTPUT_PATH = os.path.join(base_path, matrix_output_dir, OUTPUT_FILENAME)
-    
-    logging.info(f"Processing matrix from absolute path: {INPUT_PATH}")
-    
-    if not os.path.exists(INPUT_PATH):
-        logging.error(f"Input matrix not found at {INPUT_PATH}")
-        return
+    root = main_cfg['PATHS']['base_path']
+    campaign = (datetime.strptime(snapshot, '%Y%m') + relativedelta(months=1)).strftime('%Y%m')
 
-    try:
-        data_set = pd.read_csv(INPUT_PATH)
-        logging.info(f"Loaded matrix with shape: {data_set.shape}")
-    except Exception as e:
-        logging.error(f"Failed to load input matrix: {e}")
-        return
+    # Resolve I/O Paths
+    input_path = os.path.join(root, matrix_cfg['settings']['merge_output'].format(
+        campaign=campaign, snapshot=snapshot, dil=args.dil))
+    output_path = os.path.join(root, matrix_cfg['settings']['final_output'].format(
+        campaign=campaign, snapshot=snapshot, dil=args.dil))
 
-    # --- Preprocessing ---
-    snapshot_date_str = f"{snapshot[:4]}-{snapshot[4:]}-01"
-    snapshot_date = pd.to_datetime(snapshot_date_str)
+    logging.info(f"Loading raw matrix for imputation: {input_path}")
     
-    data_set['date_org'] = pd.to_datetime(data_set['date_org'], format='%d-%m-%Y', errors='coerce')
-    data_set.loc[(data_set['date_org'] < '1910-01-01') | (data_set['date_org'] > '2200-01-01'), 'date_org'] = pd.NaT
-    data_set['date_org_vintage'] = (snapshot_date - data_set['date_org']).dt.days / 30.4375
+    # HARDENING: Fix mixed type warning
+    df = pd.read_csv(input_path, low_memory=False)
+    # Ensure all columns start as lowercase for matching dictionaries
+    df.columns = df.columns.str.lower().str.strip()
+    
+    logging.info(f"Loaded matrix shape: {df.shape}")
 
-    delta_cols = ['MXDT_range_lm', 'MNDT_range_lm', 'MXDT_range_lm2', 'MNDT_range_lm2', 'MXDT_range_lm3', 'MNDT_range_lm3']
-    if all(col in data_set.columns for col in delta_cols):
-        data_set['delta_range_lm'] = data_set['MXDT_range_lm'] - data_set['MNDT_range_lm']
-        data_set['delta_range_lm2'] = data_set['MXDT_range_lm2'] - data_set['MNDT_range_lm2']
-        data_set['delta_range_lm3'] = data_set['MXDT_range_lm3'] - data_set['MNDT_range_lm3']
-        delta_range = ['delta_range_lm', 'delta_range_lm2', 'delta_range_lm3']
-        data_set['delta_range_cnt'] = data_set[delta_range].apply(lambda x: x.nunique(), axis=1)
-        data_set['delta_range_avg'] = data_set[delta_range].mean(axis=1)
-        data_set.loc[data_set['delta_range_cnt'] == 0, 'delta_range_cnt'] = data_set['delta_range_cnt'].median()
+    # 1. Date Preprocessing
+    snapshot_date = pd.to_datetime(f"{snapshot[:4]}-{snapshot[4:]}-01")
+    if 'date_org' in df.columns:
+        # HARDENING: Fix dayfirst warning
+        df['date_org'] = pd.to_datetime(df['date_org'], dayfirst=True, errors='coerce')
+        df.loc[(df['date_org'] < '1910-01-01') | (df['date_org'] > '2200-01-01'), 'date_org'] = pd.NaT
+        df['date_org_vintage'] = (snapshot_date - df['date_org']).dt.days / 30.4375
 
-    data_set = data_set.rename(columns=change_names)
-    categorical_cols_to_drop = _impute_static(data_set)
-    data_set = data_set.fillna(0)
+    # 2. Delta Range Calculations
+    delta_cols = ['mxdt_range_lm', 'mndt_range_lm', 'mxdt_range_lm2', 'mndt_range_lm2', 'mxdt_range_lm3', 'mndt_range_lm3']
+    if all(col in df.columns for col in delta_cols):
+        for col in delta_cols:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+            
+        df['delta_range_lm'] = df['mxdt_range_lm'] - df['mndt_range_lm']
+        df['delta_range_lm2'] = df['mxdt_range_lm2'] - df['mndt_range_lm2']
+        df['delta_range_lm3'] = df['mxdt_range_lm3'] - df['mndt_range_lm3']
+        
+        delta_list = ['delta_range_lm', 'delta_range_lm2', 'delta_range_lm3']
+        df['delta_range_cnt'] = df[delta_list].apply(lambda x: x.nunique(), axis=1)
+        df['delta_range_avg'] = df[delta_list].mean(axis=1)
+        df.loc[df['delta_range_cnt'] == 0, 'delta_range_cnt'] = df['delta_range_cnt'].median()
 
-    # --- Dummification ---
-    fmt = '{0}_{1}'
-    for feature, values_to_dummy in categorical_features.items():
-        if feature not in data_set.columns:
+    # 3. Rename, Impute, and Global Fill
+    # This uses the CHANGE_NAMES dictionary defined at the top
+    df = df.rename(columns=CHANGE_NAMES)
+    categorical_cols_to_drop = _impute_static(df)
+    df = df.fillna(0)
+
+    # 4. Dummification
+    for feature, values_to_dummy in CATEGORICAL_FEATURES.items():
+        if feature not in df.columns:
             continue
-        logging.info(f"Dummifying feature {feature}")
+            
+        logging.info(f"Dummifying: {feature}")
         for value in values_to_dummy:
-            new_col = fmt.format(feature, value)
-            data_set[new_col] = 0
-            data_set.loc[data_set[feature].astype(str) == str(value), new_col] = 1
+            new_col = f"{feature}_{value}".lower()
+            df[new_col] = (df[feature].astype(str) == str(value)).astype(int)
+            
         if len(values_to_dummy) > 1:
-            new_col = fmt.format(feature, 'OTHER_CATEGORIES')
-            data_set[new_col] = 0
-            data_set.loc[~data_set[feature].astype(str).isin([str(v) for v in values_to_dummy]), new_col] = 1
+            other_col = f"{feature}_other_categories".lower()
+            df[other_col] = (~df[feature].astype(str).isin([str(v) for v in values_to_dummy])).astype(int)
 
-    # --- Clean-up ---
-    final_useless_cols = list(set(useless_columns + list(categorical_features.keys()) + categorical_cols_to_drop))
-    cols_to_drop = [col for col in final_useless_cols if col in data_set.columns]
-    data_set = data_set.drop(columns=cols_to_drop, errors='ignore')
+    # 5. Clean-up and Export
+    final_drop = list(set(USELESS_COLUMNS + list(CATEGORICAL_FEATURES.keys()) + categorical_cols_to_drop))
+    df = df.drop(columns=[c for c in final_drop if c in df.columns], errors='ignore')
     
-    # --- Final Output ---
-    os.makedirs(os.path.dirname(FINAL_OUTPUT_PATH), exist_ok=True)
-    logging.info(f"Writing final modeling matrix to {FINAL_OUTPUT_PATH}")
-    data_set.to_csv(FINAL_OUTPUT_PATH, index=False)
-    logging.info("✨ Preprocessing complete on Databricks.")
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    df.to_csv(output_path, index=False)
+    logging.info(f"✅ Final matrix complete: {output_path}")
+
+    return output_path
