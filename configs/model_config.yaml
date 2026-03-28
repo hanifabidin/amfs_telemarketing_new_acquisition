@@ -1,0 +1,19 @@
+# amfs_tm/configs/model_config.yaml
+
+training_settings:
+  test_size: 0.2
+  random_state: 42
+  target_col: "target"
+  # Features to ignore during training (IDs, dates, etc.)
+  features_to_drop: ['cifno', 'target', 'date_org', 'snapshot', 'campaign']
+
+# XGBoost Hyperparameters
+model_params:
+  n_estimators: 200
+  max_depth: 5
+  learning_rate: 0.05
+  objective: "binary:logistic"
+  eval_metric: "auc"
+  # Use 'hist' for faster training on Databricks clusters
+  tree_method: "hist" 
+  scale_pos_weight: 1 # Increase if conversion rate is very low (e.g., 10 or 20)

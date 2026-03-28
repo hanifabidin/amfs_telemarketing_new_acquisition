@@ -2,6 +2,12 @@
 # Consolidated feature generation settings
 
 features_to_run:
+
+  - module: lib.feature.bank.avr
+    class: BankAvr
+    enabled: true
+    methods: ["create"]
+
   - module: lib.feature.bank.card_type
     class: CreditType
     enabled: true
@@ -22,7 +28,7 @@ features_to_run:
   - module: lib.feature.bank.balance
     class: Balance
     enabled: true
-    methods: ["create_clean", "create_raw", "create", "create_real"]
+    methods: ["create_clean", "create_raw", "create", "create_deduct", "create_real"]
 
   - module: lib.feature.bank.trx.trx_net
     class: TrxNet
@@ -42,3 +48,13 @@ features_to_run:
   - module: lib.feature.geo.cust_zipcode
     class: CustZipcode
     enabled: true
+
+  - module: lib.feature.axa.tso
+    class: TSO
+    enabled: true
+    methods: ["create"]
+
+  - module: lib.segmentation.apply_flag
+    class: ApplyFlag
+    enabled: true
+    methods: ["create"]
