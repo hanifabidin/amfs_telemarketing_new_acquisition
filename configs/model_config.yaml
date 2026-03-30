@@ -1,11 +1,33 @@
+ # amfs_tm/configs/model_config.yaml
+
 # amfs_tm/configs/model_config.yaml
 
 training_settings:
   test_size: 0.2
   random_state: 42
   target_col: "target"
-  # Features to ignore during training (IDs, dates, etc.)
-  features_to_drop: ['cifno', 'target', 'date_org', 'snapshot', 'campaign']
+  # Add the specific invalid columns found in your error log here
+  features_to_drop: 
+    - cifno
+    - target
+    - date_org
+    - mxdt
+    - mndt
+    - yymm
+    - weekday_mxdt_x
+    - weekday_mndt_x
+    - gp1pdt_x
+    - gp1pdt_y
+    - sfstopn
+    - slstopn
+    - dfstopn
+    - dlstopn
+    - gfstopn
+    - glstopn
+    - cfstopn
+    - clstopn
+    - weekday_mxdt_y
+    - weekday_mndt_y
 
 # XGBoost Hyperparameters
 model_params:

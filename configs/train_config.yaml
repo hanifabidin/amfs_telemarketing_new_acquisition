@@ -5,21 +5,19 @@ settings:
   mode: "dummy" 
   dummy_conversion_rate: 0.05
 
-  # Real Data Logic: Combine multiple for train, use latest for test
+  # Training/Testing snapshot selection
   train_snapshots: ["202501", "202502", "202503", "202504"]
   test_snapshot: "202505"
 
-  # Path to call tracking result (Campaign Result)
-  # {campaign} is snapshot + 1
+  # Path to bank campaign results (Campaign month is snapshot + 1)
   call_tracking_file: "01_raw/data_from_BM/{campaign}/call_tracking_{campaign}.txt"
 
 paths:
-  # Output locations within 05_modelling
-  train_output: "05_modelling/training_data/train_compiled_{mode}.csv"
-  test_output: "05_modelling/testing_data/test_compiled_{mode}.csv"
+  # Modelling artifacts moved to 04_modelling
+  train_output: "04_modelling/training_data/train_data_{mode}_{snapshot}.csv"
+  test_output: "04_modelling/testing_data/test_data_{mode}_{snapshot}.csv"
 
 target_logic:
   target_col: "target"
-  # Logic: Filter only those called (callid >= 1), then mark converted (>= 901)
   called_threshold: 1
   conversion_threshold: 901

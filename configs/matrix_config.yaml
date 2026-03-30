@@ -5,13 +5,13 @@ settings:
   running_mode: "all"
   
   # Input from the filtering step
-  input_file: "04_campaigns/{campaign}/01_filters/filtered_cif_{snapshot}_DIL_{dil}_campaign_{campaign}.csv"
+  input_file: "05_campaigns/{campaign}/01_filters/filtered_cif_{snapshot}_DIL_{dil}_campaign_{campaign}.csv"
   
   # Intermediate merge output
-  merge_output: "04_campaigns/{campaign}/02_matrix/matrix_{snapshot}_merged_raw.csv"
+  merge_output: "05_campaigns/{campaign}/02_matrix/matrix_{snapshot}_merged_raw.csv"
   
   # Final dummified/imputed output
-  final_output: "04_campaigns/{campaign}/02_matrix/matrix_{snapshot}_DIL_{dil}_campaign_{campaign}_final.csv"
+  final_output: "05_campaigns/{campaign}/02_matrix/matrix_{snapshot}_DIL_{dil}_campaign_{campaign}_final.csv"
 
 feature_sets:
   cif_summary:

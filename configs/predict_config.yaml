@@ -1,0 +1,20 @@
+# amfs_tm/configs/predict_config.yaml
+
+settings:
+  # The model to use (Pulling from 04_modelling)
+  model_path: "04_modelling/model_file/model_propensity_dummy_{snapshot}.pkl"
+  
+  # Input matrix from 05_campaigns
+  input_matrix: "05_campaigns/{campaign}/02_matrix/matrix_{snapshot}_DIL_{dil}_campaign_{campaign}_final.csv"
+  
+  # Output prediction
+  output_prediction: "05_campaigns/{campaign}/03_predictions/prediction_score_{snapshot}_DIL_{dil}.csv"
+  
+  # Metrics comparison log
+  metrics_log: "05_campaigns/{campaign}/03_predictions/inference_metrics_{snapshot}.json"
+
+params:
+  target_col: "target"
+  # Columns to ignore during the actual model.predict() call
+  # MUST match the drop list used in model_trainer.py
+  features_to_drop: ['cifno', 'target', 'date_org', 'yymm', 'snapshot', 'campaign']
