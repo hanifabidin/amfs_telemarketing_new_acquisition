@@ -1,7 +1,7 @@
 # amfs_tm/src/lib/filters/filters_config.yaml
 
 output:
-  path: "04_campaigns/{campaign}/01_filters/filtered_cif_{snapshot}_DIL_{DIL}_campaign_{campaign}.csv"
+  path: "05_campaigns/{campaign}/01_filters/filtered_cif_{snapshot}_DIL_{DIL}_campaign_{campaign}.csv"
 
 rules:
   exclude_new_customer:
