@@ -40,7 +40,7 @@ cleaning_steps:
     data_source: BM
     cleaning_type: standard
 
-  - raw_data_filename_pattern: debitcard_trx_edc_{snapshot}.txt
+  - raw_data_filename_pattern: debitcard_trx_edc_cif_{snapshot}.txt
     processed_data_filename_pattern: debitcard_trx_edc_{snapshot}.txt
     data_source: BM
     cleaning_type: trxdebit_edc

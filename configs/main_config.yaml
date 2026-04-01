@@ -1,7 +1,7 @@
 # amfs_tm/configs/main_config.yaml
 PATHS:
   # The absolute Volume path to your Schema
-  base_path: /Volumes/main/amfs_telemarketing_new_acquisition
+  base_path: /Volumes/main/default/amfs_telemarketing_new_acquisition
 
   # Volume names as shown in your Databricks screenshot
   raw_dir_prefix: 01_raw
